@@ -66,15 +66,15 @@
  },
  "traps": {
   "n": 12,
-  "caught": 9,
-  "rate": 0.75,
+  "caught": 10,
+  "rate": 0.8333333333333334,
   "by_type": {
    "wrong_class": [
     3,
     3
    ],
    "loose": [
-    2,
+    3,
     3
    ],
    "extra": [
@@ -90,10 +90,6 @@
    [
     "img_021.jpg",
     "missing"
-   ],
-   [
-    "img_006.jpg",
-    "loose"
    ],
    [
     "img_005.jpg",

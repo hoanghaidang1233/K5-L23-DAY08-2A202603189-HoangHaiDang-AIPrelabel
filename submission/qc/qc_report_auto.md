@@ -13,7 +13,7 @@
 | **Ảnh có lỗi** (dùng cho ngưỡng) | 1/5 = 20.0% | 5 ảnh trong mẫu |
 | Máy: accepted / edited / deleted | 436/509 = 85.7% / 17/509 = 3.3% / 56/509 = 11.0% | 509 box máy |
 | Máy: added | 19/472 = 4.0% | 472 đối tượng sau duyệt |
-| Bắt lỗi bẫy | 9/12 = 75.0% | 12 bẫy |
+| Bắt lỗi bẫy | 10/12 = 83.3% | 12 bẫy |
 
 ## Top 3 loại lỗi
 | Loại lỗi | Số lỗi | Ảnh ví dụ |
@@ -27,6 +27,5 @@
 **REWORK**
 
 - ảnh có lỗi 20.0% > 2%
-- bắt bẫy 75% < 80% -> lô duyệt chưa đáng tin
 
 Cây quyết định: Hold (guideline chưa rõ / dữ liệu hỏng) -> Rework (> ngưỡng, lỗi lặp, bắt bẫy / nhất quán thấp) -> Release.

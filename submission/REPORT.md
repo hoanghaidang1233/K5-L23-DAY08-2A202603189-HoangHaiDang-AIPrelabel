@@ -37,8 +37,8 @@ Chuỗi ngưỡng dùng ở Part 4 (từ `qc/threshold_sweep.md`): `--thr "motor
 
 ## 3. Thiên kiến tự động hóa và ảnh bẫy
 
-- Bắt bẫy: 9/12 = 75% (KTC 95%: 47–91%; ngưỡng đạt 80%); theo loại: wrong_class 3/3, extra 3/3, loose 2/3, missing 1/3; loại nào lọt: missing ở img_005 và img_021 (đều là ảnh dày), loose ở img_006; vì sao (bạn đã bỏ bước nào của checklist)? Bẫy `missing` ở img_005, img_021 lọt vì tôi làm hời hợt **bước 1 (bỏ sót)** ở ảnh dày. Bẫy `loose` ở img_006 (box id 85) lọt vì tôi bỏ sót việc kiểm cạnh box (bước 4): số tự đếm khớp với máy nên không kiểm từng box; box này lọt **cả khi review lẫn khi QC**.
-- Accepted cao mà bắt bẫy thấp (hoặc ngược lại) nói gì về cách bạn duyệt? Cách duyệt của tôi còn chưa chuẩn và chưa chính xác: accepted 85.7% (436/509) cao nhưng chỉ bắt 9/12 bẫy, tức là nhiều box được giữ vì trông hợp lý chứ chưa được kiểm thật (thiên kiến tự động hóa).
+- Bắt bẫy: 10/12 = 83.3% (sau khi biết box id 85 ở img_006 là bẫy; khi review thật là 9/12) (KTC 95%: 55–95%; ngưỡng đạt 80%); theo loại: wrong_class 3/3, extra 3/3, loose 3/3, missing 1/3; loại nào lọt: missing ở img_005 và img_021 (đều là ảnh dày); vì sao (bạn đã bỏ bước nào của checklist)? Bẫy `missing` ở img_005, img_021 lọt vì tôi làm hời hợt **bước 1 (bỏ sót)** ở ảnh dày. Bẫy `loose` ở img_006 (box id 85) lọt vì tôi bỏ sót việc kiểm cạnh box (bước 4): số tự đếm khớp với máy nên không kiểm từng box; box này lọt **cả khi review lẫn khi QC**.
+- Accepted cao mà bắt bẫy thấp (hoặc ngược lại) nói gì về cách bạn duyệt? Cách duyệt của tôi còn chưa chuẩn và chưa chính xác: accepted 85.7% (436/509) cao nhưng chỉ bắt 9/12 bẫy khi review thật (10/12 sau khi biết box id 85 ở img_006 là bẫy; khi review thật là 9/12), tức là nhiều box được giữ vì trông hợp lý chứ chưa được kiểm thật (thiên kiến tự động hóa).
 
 ## 4. Máy có đáng dùng không?
 
@@ -74,11 +74,11 @@ Toạ độ click lấy từ box trong `labels/batch_reviewed.json` (dương ở
 - Mẫu: 5 ảnh (0 ảnh `can_review` vì không tick box nào + 5 ngẫu nhiên, seed 42: img_003, img_006, img_014, img_031, img_035; 97 đối tượng / 24 ảnh, 483 đối tượng trong release); người kiểm: bạn (**hạn chế**: bạn vừa là người duyệt).
 - Lỗi theo **đối tượng**: 1/97 = 1.0% · theo **ảnh**: 1/5 = 20.0% (ngưỡng Release ≤ 2%)
 - Top lỗi (trong: bỏ sót, thừa, sai lớp, sai vị trí/kích thước, sai thuộc tính, sai mask) + một ảnh ví dụ mỗi loại: `sai_vi_tri_kich_thuoc` 1 lỗi — img_006 box id 85 (`person`): cạnh trên dư ~45 px, cạnh dưới cắt chân ~18 px (IoU với box gốc ≈ 0.60). Không ghi nhận loại lỗi khác.
-- **Giới hạn mẫu nhỏ** (cận trên 95% trong `qc_report_auto.md`): 1 ảnh lỗi / 5 ảnh → cận trên 95% (Wilson) của tỉ lệ ảnh lỗi thật là **62%**; mẫu 5 ảnh không chứng minh được "≤ 2%". **Lần QC đầu tôi ghi cả 5 ảnh là `khong`**; chỉ sau khi đối chiếu `traps_key.json` (sau export) mới thấy box id 85 ở img_006 chính là bẫy `loose` đã lọt khi review và còn nguyên trong nhãn cuối → QC bởi cùng người duyệt bỏ sót đúng lỗi mà người đó đã bỏ sót khi review.
+- **Giới hạn mẫu nhỏ** (cận trên 95% trong `qc_report_auto.md`): 1 ảnh lỗi / 5 ảnh → cận trên 95% (Wilson) của tỉ lệ ảnh lỗi thật là **62%**; mẫu 5 ảnh không chứng minh được "≤ 2%". **Lần QC đầu tôi ghi cả 5 ảnh là `khong`**; chỉ sau khi đối chiếu `traps_key.json` (sau export) mới thấy box id 85 ở img_006 chính là bẫy `loose` đã lọt khi review và còn nguyên trong nhãn cuối → QC bởi cùng người duyệt bỏ sót đúng lỗi mà người đó đã bỏ sót khi review. QC này làm trên release trước khi sửa box id 85; sau đó tôi sửa box này, export lại `batch_reviewed.json` và chạy lại `review_stats` / `build_release`.
 - Script kiểm được / không kiểm được (ví dụ ôm sát, cùng bỏ sót với máy, theo checklist thật): script **không** kiểm được: box có ôm sát vật không, vật bị cả máy lẫn người cùng bỏ sót, và người review có thật sự làm theo checklist không. Script chỉ đếm theo phiếu kiểm bằng mắt.
 
-**Quyết định: Rework**, ngày 2026-11-17. Lý do (đi theo Hold → Rework → Release): không Hold vì guideline đã được làm rõ ở v1.1 và dữ liệu không hỏng; Rework vì lỗi theo ảnh 1/5 = 20% > 2% và bắt bẫy 9/12 = 75% < 80%, lô cần phải review lại (khớp gợi ý REWORK của `qc_report.py`); chưa Release.
-Nếu Rework / Hold, việc cần làm tiếp: review lại lô 24 ảnh theo checklist và guideline v1.1 (gồm sửa box id 85 ở img_006 và 9 box < 20 px nêu ở mục 6).
+**Quyết định: Rework**, ngày 2026-11-17. Lý do (đi theo Hold → Rework → Release): không Hold vì guideline đã được làm rõ ở v1.1 và dữ liệu không hỏng; Rework vì lỗi theo ảnh 1/5 = 20% > 2% và bắt bẫy khi review thật 9/12 = 75% < 80% (10/12 = 83.3% sau khi biết box id 85 ở img_006 là bẫy; khi review thật là 9/12), lô cần phải review lại (khớp gợi ý REWORK của `qc_report.py`); chưa Release.
+Nếu Rework / Hold, việc cần làm tiếp: review lại lô 24 ảnh theo checklist và guideline v1.1 (box id 85 ở img_006 đã sửa; còn 9 box < 20 px nêu ở mục 6 và 2 bẫy missing ở img_005, img_021).
 
 ## 8. Ghi chú cá nhân
 
