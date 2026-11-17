@@ -20,9 +20,11 @@ def main() -> None:
         attrs = []
         if name != tax.ignore:
             for a in tax.attrs.values():
+                default = str(a.get("default", ""))
+                # CVAT mới yêu cầu values không rỗng: text/checkbox dùng [default_value] như UI của CVAT tự sinh
+                values = [str(v) for v in a.get("values", [])] if a["type"] == "select" else [default]
                 attrs.append({"name": a["name"], "mutable": False, "input_type": a["type"],
-                              "default_value": str(a.get("default", "")),
-                              "values": [str(v) for v in a.get("values", [])] if a["type"] == "select" else []})
+                              "default_value": default, "values": values})
         # type "any": cho phép cả rectangle (detection) và polygon (segmentation) trong cùng Project
         labels.append({"name": name, "color": "#808080" if name == tax.ignore else COLORS[i % len(COLORS)],
                        "type": "any", "attributes": attrs})
