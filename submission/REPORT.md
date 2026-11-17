@@ -6,14 +6,20 @@
 
 | Lớp | Model + cỡ | Ngưỡng | Vì sao (dẫn `run_id` trong `model_log.csv`) |
 |---|---|---|---|
-| person / bicycle / motorbike / car / bus / truck | <<YOLO26m>> | <<theo lớp, từ threshold_sweep>> | <<>> |
-| three_wheeler | <<YOLOE-26s, prompt: ...>> | <<>> | <<>> |
+| motorbike | YOLO26m (`--size m`) | **0.35** | `threshold_sweep`: recall 11/12 = 92%, precision 11/11 = 100% (12 vật gold). Ở 0.5 recall còn 10/12 (r02 cũng thấy tăng ngưỡng làm mất xe máy thật, img_007) |
+| person | YOLO26m | 0.3 (mặc định) | Không ngưỡng nào ≤ 0.5 đạt recall 90% (tối đa 16/21 = 76% ở 0.15). Ở 0.3: precision 15/29 = 52%, recall 15/21 = 71%. Hạ ngưỡng chỉ thêm 1 TP nhưng thêm 4 FP → giữ 0.3 và bù bằng review (bước "bỏ sót") |
+| car | YOLO26m | 0.3 (mặc định) | Tối đa recall 7/8 = 88%, không đổi từ 0.1 đến 0.5; ở 0.3 precision 7/13 = 54% (6 FP); lên 0.5 vẫn còn 4 FP (precision 64%), đến 0.9 mới hết FP nhưng recall còn 4/8. FP điểm cao khó lọc bằng ngưỡng → có thể là lỗi sai lớp giống ở pilot (xe ba bánh / van gọi `car`: r01 img_016, r04 img_004, img_013), cần kiểm ở review |
+| bicycle / bus / truck | YOLO26m | 0.3 (mặc định) | Quá ít vật trong gold (bicycle 4, bus 0, truck 1 < 5): không chọn ngưỡng riêng. `truck`: recall 0/1 ở mọi ngưỡng, FP 2 ở 0.3 (xe ba bánh gọi truck, r01 img_011, img_002) |
+| three_wheeler | YOLOE-26s, prompt `three_wheeler` | **0.15** | recall 7/7 = 100%, precision 7/9 = 78%. Ở 0.3 recall chỉ 5/7 = 71% → hạ ngưỡng vì sót xe ba bánh tốn hơn xoá 2 box thừa khi review (r03, r06) |
 
-- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): <<>>
-- **Phiên bản SAM bạn chọn** (SAM 1 / 2.1 / 3) và lý do: <<chất lượng mask, tốc độ, RAM, quyền truy cập>>
-- Lỗi nào **không sửa được bằng đổi ngưỡng** (ví dụ tuk-tuk bị gọi `car`)? Sửa thế nào? <<>>
-- Box **điểm cao mà sai** hoặc **điểm thấp mà đúng** (ảnh nào): <<>>
-- Giới hạn: chọn ngưỡng trên chính gold (4 ảnh) nên số đo máy trên gold là lạc quan: <<>>
+Chuỗi ngưỡng dùng ở Part 4 (từ `qc/threshold_sweep.md`): `--thr "motorbike=0.35,three_wheeler=0.15"`, các lớp khác `--conf 0.3`.
+
+- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): <<điền ở Part 4>>
+- **Phiên bản SAM bạn chọn** (SAM 1 / 2.1 / 3) và lý do: SAM 2.1 (`sam2.1_b.pt`). Máy có GPU RTX 3050 (CUDA) chạy được: 2.21 s/ảnh ở r04 (gồm cả YOLO26 + SAM), là bản lab khuyến nghị cân bằng chất lượng / tốc độ. Không cần SAM 3 (gated). Chưa so trực tiếp với MobileSAM.
+- Lỗi nào **không sửa được bằng đổi ngưỡng** (ví dụ tuk-tuk bị gọi `car`)? Sửa thế nào? Xe ba bánh bị YOLO26 gọi sai lớp với điểm cao: img_011 `truck 0.77`, img_002 `truck 0.73`; box 0.77 vẫn còn khi tăng conf lên 0.5 (r02). Đây là lỗi **sai lớp** (COCO không có lớp xe ba bánh) nên ngưỡng không sửa được. Cách sửa: dùng YOLOE prompt `three_wheeler` cho lớp này, merge với YOLO26 (YOLOE đặt trước), và ở bước review kiểm mọi box `car`/`truck` xem có phải xe ba bánh không.
+- Box **điểm cao mà sai** hoặc **điểm thấp mà đúng** (ảnh nào): điểm cao mà sai: img_011 `truck 0.77` (xe ba bánh), img_016 `car 0.73` (xe van), img_002 `truck 0.73` (xe ba bánh). Điểm thấp mà đúng: khi tăng conf 0.25 → 0.5 (r02) mất 75 box, chủ yếu người / xe máy thật ở xa (img_007: 9 person, 6 motorbike; img_011: 8 person).
+- **Điểm 0.9 có phải đúng 90% không?** Không. `conf` là độ tự tin của model, không phải xác suất đúng; ví dụ `truck 0.77` ở img_011 vẫn sai lớp.
+- Giới hạn: chọn ngưỡng trên chính gold (4 ảnh) nên số đo máy trên gold là lạc quan: ngưỡng được chọn và chấm trên cùng 4 ảnh gold nên precision / recall ở trên là **lạc quan**; mẫu rất nhỏ (motorbike 12, three_wheeler 7 vật: một vật đổi recall 8–14 điểm %); bicycle / bus / truck không đủ vật để chọn ngưỡng riêng.
 
 ## 2. AI error profile (từ `qc/review_stats.md`)
 
