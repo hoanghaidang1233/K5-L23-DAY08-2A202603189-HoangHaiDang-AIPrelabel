@@ -5,10 +5,10 @@
 - Lớp (L2 / L3 / khác): L2
 - Tài khoản GitHub: hoanghaidang1233
 - Repo bài nộp (URL): https://github.com/hoanghaidang1233/K5-L23-Day08-2A202603189-HoangHaiDang-AI-Assisted-Labeling
-- Commit chốt bài (hash): <<>>
+- Commit chốt bài (hash): b3ff038
 - Máy: Windows 11, NVIDIA GeForce RTX 3050 Laptop GPU (CUDA)
 - CVAT (Docker): v2.74.1
-
+python scripts/check_submission.py
 ## Kết quả tóm tắt (điền cuối bài; số lấy từ `submission/qc/*`, kèm mẫu số)
 
 - Máy: accepted / edited / deleted: 436 / 17 / 56 (mẫu số: 509 box máy) = 85.7% / 3.3% / 11.0%; added: 19 (mẫu số: 472 đối tượng) = 4.0%
