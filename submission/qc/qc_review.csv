@@ -1,0 +1,6 @@
+image,object_id,error_type,reviewer,note
+img_003.jpg,,khong,HoangHaiDang,
+img_006.jpg,85,sai_vi_tri_kich_thuoc,HoangHaiDang,"box person lỏng: trên dư ~45px, dưới cắt chân ~18px (bẫy loose lọt khi review)"
+img_014.jpg,,khong,HoangHaiDang,
+img_031.jpg,,khong,HoangHaiDang,
+img_035.jpg,,khong,HoangHaiDang,

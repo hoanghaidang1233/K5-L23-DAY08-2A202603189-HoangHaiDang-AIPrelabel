@@ -14,7 +14,7 @@
 
 Chuỗi ngưỡng dùng ở Part 4 (từ `qc/threshold_sweep.md`): `--thr "motorbike=0.35,three_wheeler=0.15"`, các lớp khác `--conf 0.3`.
 
-- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): <<điền ở Part 4>>
+- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): `python scripts/merge_prelabels.py work/prelabel/yoloe_all/pre.coco.json work/prelabel/y26_all/pre.coco.json --thr "motorbike=0.35,three_wheeler=0.15" --conf 0.3 --iou 0.6 --split "batch,gold" --out work/prelabel/merged_review/pre.coco.json` (kết quả 28 ảnh, 595 box; sau `inject_traps --student 2A202603189`: file nạp CVAT 24 ảnh, 522 box)
 - **Phiên bản SAM bạn chọn** (SAM 1 / 2.1 / 3) và lý do: SAM 2.1 (`sam2.1_b.pt`). Máy có GPU RTX 3050 (CUDA) chạy được: 2.21 s/ảnh ở r04 (gồm cả YOLO26 + SAM), là bản lab khuyến nghị cân bằng chất lượng / tốc độ. Không cần SAM 3 (gated). Chưa so trực tiếp với MobileSAM.
 - Lỗi nào **không sửa được bằng đổi ngưỡng** (ví dụ tuk-tuk bị gọi `car`)? Sửa thế nào? Xe ba bánh bị YOLO26 gọi sai lớp với điểm cao: img_011 `truck 0.77`, img_002 `truck 0.73`; box 0.77 vẫn còn khi tăng conf lên 0.5 (r02). Đây là lỗi **sai lớp** (COCO không có lớp xe ba bánh) nên ngưỡng không sửa được. Cách sửa: dùng YOLOE prompt `three_wheeler` cho lớp này, merge với YOLO26 (YOLOE đặt trước), và ở bước review kiểm mọi box `car`/`truck` xem có phải xe ba bánh không.
 - Box **điểm cao mà sai** hoặc **điểm thấp mà đúng** (ảnh nào): điểm cao mà sai: img_011 `truck 0.77` (xe ba bánh), img_016 `car 0.73` (xe van), img_002 `truck 0.73` (xe ba bánh). Điểm thấp mà đúng: khi tăng conf 0.25 → 0.5 (r02) mất 75 box, chủ yếu người / xe máy thật ở xa (img_007: 9 person, 6 motorbike; img_011: 8 person).
@@ -25,68 +25,76 @@ Chuỗi ngưỡng dùng ở Part 4 (từ `qc/threshold_sweep.md`): `--thr "motor
 
 | Trạng thái | Số | Tỉ lệ | Mẫu số |
 |---|---|---|---|
-| accepted | <<>> | <<>> | <<box máy>> |
-| edited | <<>> | <<>> | <<>> |
-| deleted | <<>> | <<>> | <<>> |
-| added | <<>> | <<>> | <<đối tượng sau duyệt>> |
+| accepted | 436 | 85.7% | 509 box máy |
+| edited | 17 | 3.3% | 509 box máy |
+| deleted | 56 | 11.0% | 509 box máy |
+| added | 19 | 4.0% | 472 đối tượng sau duyệt |
 
-- Lớp nào máy tệ nhất? Vì sao (dẫn ảnh)? <<>>
-- So với gold: precision / recall của **máy** <<>> (mẫu số: <<đối tượng gold>>)
+Đã loại 24 đối tượng quanh vùng bẫy khỏi bảng (lỗi nhân tạo, không phản ánh máy). Trong deleted + added có 12 ca **đổi lớp** (script tính = xoá + thêm), nên máy **sót thật** ≈ 19 − 12 = 7 vật. Theo lớp (accepted / edited / deleted / added): person 250/3/13/0 · motorbike 121/5/2/3 · car 51/0/4/5 · bicycle 6/0/2/1 · bus 2/0/1/3 · truck 0/0/6/3 · three_wheeler 6/9/28/4.
+
+- Lớp nào máy tệ nhất? Vì sao (dẫn ảnh)? `three_wheeler`: chỉ 6 box giữ nguyên, 9 sửa, 28 xoá, vẫn phải vẽ thêm 4 (6/43 box máy được chấp nhận). Nguyên nhân chính là ngưỡng YOLOE 0.15 chọn ở Part 3 (để recall trên gold 7/7) kéo theo nhiều box thừa điểm thấp trên lô batch; thêm lỗi YOLO26 gọi xe ba bánh là truck / car (img_011, img_002, img_013) và YOLOE không nhận xích lô (img_007).
+- So với gold: precision / recall của **máy** 43/64 = 67.2% (KTC 95%: 55–77%) / 43/53 = 81.1% (KTC 95%: 69–89%); TP 43, FP 21, FN 10 (mẫu số: 53 đối tượng gold, 4 ảnh; lạc quan vì ngưỡng chọn trên chính gold)
 
 ## 3. Thiên kiến tự động hóa và ảnh bẫy
 
-- Bắt bẫy: <<.../12>>; loại nào lọt: <<>>; vì sao (bạn đã bỏ bước nào của checklist)? <<>>
-- Accepted cao mà bắt bẫy thấp (hoặc ngược lại) nói gì về cách bạn duyệt? <<>>
+- Bắt bẫy: 9/12 = 75% (KTC 95%: 47–91%; ngưỡng đạt 80%); theo loại: wrong_class 3/3, extra 3/3, loose 2/3, missing 1/3; loại nào lọt: missing ở img_005 và img_021 (đều là ảnh dày), loose ở img_006; vì sao (bạn đã bỏ bước nào của checklist)? Bẫy `missing` ở img_005, img_021 lọt vì tôi làm hời hợt **bước 1 (bỏ sót)** ở ảnh dày. Bẫy `loose` ở img_006 (box id 85) lọt vì tôi bỏ sót việc kiểm cạnh box (bước 4): số tự đếm khớp với máy nên không kiểm từng box; box này lọt **cả khi review lẫn khi QC**.
+- Accepted cao mà bắt bẫy thấp (hoặc ngược lại) nói gì về cách bạn duyệt? Cách duyệt của tôi còn chưa chuẩn và chưa chính xác: accepted 85.7% (436/509) cao nhưng chỉ bắt 9/12 bẫy, tức là nhiều box được giữ vì trông hợp lý chứ chưa được kiểm thật (thiên kiến tự động hóa).
 
 ## 4. Máy có đáng dùng không?
 
-- Thời gian (từ `time_log.csv`): gán tay <<... phút/ảnh>> vs duyệt <<... phút/ảnh>>. Thiên lệch (bạn gán gold trước nên đã quen cảnh): <<>>
-- Kết luận: <<có / không / chỉ cho lớp nào>>, dựa trên <<số liệu>>
+- Thời gian (từ `time_log.csv`): gán tay 12 phút / 4 ảnh = 3.0 phút/ảnh (61 đối tượng = 5.1 đối tượng/phút) vs duyệt 75 phút / 24 ảnh = 3.1 phút/ảnh (472 đối tượng = 6.3 đối tượng/phút). Thiên lệch (bạn gán gold trước nên đã quen cảnh): ảnh gold ít vật hơn (61/4 ≈ 15 vật/ảnh so với 472/24 ≈ 20 vật/ảnh ở batch) và lúc review tôi đã quen cảnh hơn, nên so sánh phút/ảnh không công bằng hoàn toàn.
+- Kết luận: **có**, nhưng để máy dùng tốt thì cần dữ liệu chuẩn; dựa trên accepted 85.7% (436/509 box máy), tốc độ 6.3 so với 5.1 đối tượng/phút, nhưng máy vẫn sót (recall trên gold 43/53 = 81.1%) nên không bỏ được bước review.
 - **Ba quy tắc giảm thiên kiến của bạn** (mỗi quy tắc kiểm tra được bằng số hoặc việc làm):
-  1. <<>>
-  2. <<>>
-  3. <<>>
+  1. Ghi số tự đếm **trước** khi hiện nhãn máy, ở 24/24 ảnh (kiểm bằng bảng nháp review).
+  2. Ảnh từ 30 vật trở lên: quét đủ 4 phần tư, mỗi phần tư làm lại bước 1 (bỏ sót).
+  3. Ảnh không sửa box nào vẫn phải kiểm cạnh các box (bước 4), không chấp nhận chỉ vì số đếm khớp máy.
 
 ## 5. Mask SAM cho 3 vật (Part 5)
 
 | Ảnh | SAM (phiên bản) | Số click | Mask gồm người lái / hàng hoá? | Lỗi quan sát | File trong `masks/` |
 |---|---|---|---|---|---|
-| <<img_0xx>> | <<>> | <<>> | <<>> | <<>> | <<>> |
+| img_013 (tuk-tuk, box 91,27–893,682) | SAM 2.1 `sam2.1_b.pt` | 1 box + 1 dương + 1 âm (xe máy bên phải) | Có | mask 299 390 px = 57% diện tích box, 1 polygon | `tuktuk_img013.jpg` |
+| img_004 (xe ba bánh lớn, box 474,229–835,596) | SAM 2.1 `sam2.1_b.pt` | 1 box + 1 dương + 1 âm (người đứng mép trái) | Không |  mask 93 002 px = 70% box, 1 polygon | `threewheeler_img004.jpg` |
+| img_010 (xe ba bánh có người lái, box 414,277–576,672) | SAM 2.1 `sam2.1_b.pt` | 1 box + 1 dương + 1 âm (người lái) | không bị lem sang người lái |  mask 24 908 px = 39% box, **2 polygon** (mask bị tách) | `threewheeler_driver_img010.jpg` |
 
-- Đối chiếu guideline mục 4.2: quy tắc nào giúp, quy tắc nào thiếu? <<>>
-- *(Tuỳ chọn)* Interactor SAM trong CVAT: làm được / không (lỗi gì, đã thử gì); khác gì offline: <<>>
+Toạ độ click lấy từ box trong `labels/batch_reviewed.json` (dương ở nửa dưới thân xe, âm ở tâm box người / xe bên cạnh), mỗi vật chạy 1 lần, chưa chỉnh lại.
+
+- Đối chiếu guideline mục 4.2: quy tắc nào giúp, quy tắc nào thiếu? Giúp: "bóng đổ không thuộc vật" và "kính xe thuộc vật" (4.2.3). Thiếu: v1.0 chưa nói mask xe có gồm người lái không → đã bổ sung ở v1.1 (CAL-06). Mask img_013 ở trên **có** gồm người lái (chạy không có click âm vào người lái) nên **vi phạm** quy tắc v1.1.
+- *(Tuỳ chọn)* Interactor SAM trong CVAT: làm được / không (lỗi gì, đã thử gì); khác gì offline: có thử Interactor SAM trong CVAT (server có MobileSAM qua Nuclio) trên Task batch-review, không dùng trên ảnh gold.
 
 ## 6. Calibration (Part 6)
 
-- Số quyết định: <<>> (`calibration_decisions.csv`); quan trọng nhất (dẫn `CAL-xx`): <<>>
-- Quy tắc mới đã vào `guideline_v1.1_calibrated.md`: <<>>
-- Nguyên nhân gốc: <<guideline mơ hồ / chưa nắm quy tắc / máy>>
+- Số quyết định: 3 (`calibration_decisions.csv`: CAL-01 `loi_may`, CAL-02 và CAL-06 `cau_hoi_mo`); quan trọng nhất (dẫn `CAL-xx`): CAL-02, vì nhiều vật nhỏ không thể tách được từng vật (cả khi vẽ box lẫn khi mask).
+- Quy tắc mới đã vào `guideline_v1.1_calibrated.md`: mục 2 + 4.3 xe ba bánh (kể cả cắt mép) luôn `three_wheeler`, đếm bánh khi phân vân car / truck (CAL-01); mục 4.1.6 vật < 20 px lẻ thì bỏ, cụm ≥ 5 vật một `ignore_region` (CAL-02); mục 4.2.4 mask xe không gồm người lái (CAL-06). Câu hỏi mở 1, 5, 6, 7 chưa chốt.
+- **Chưa khớp v1.1 trong nhãn đã nộp:** `batch_reviewed.json` còn 9 box cao < 20 px (`validate_labels` cảnh báo: img_018 #160, #164, #171, #176; img_023 #254; img_027 #340, #341, #345; img_033 #416), trái với CAL-02; mask img_013 gồm người lái, trái với CAL-06. Tôi không sửa sau khi đã chạy `review_stats` để số đo khớp file; các box này nằm trong việc review lại lô (mục 7).
+- Nguyên nhân gốc: kết hợp: guideline v1.0 còn mơ hồ và quy tắc chưa rõ (CAL-02, CAL-06), cộng lỗi của máy (CAL-01: xe ba bánh bị gọi truck / car).
 
 ## 7. QC và quyết định (Part 6)
 
-- Mẫu: <<n>> ảnh (<<m>> ảnh `can_review` + <<k>> ngẫu nhiên, seed 42); người kiểm: bạn (**hạn chế**: bạn vừa là người duyệt).
-- Lỗi theo **đối tượng**: <<.../... = ...%>> · theo **ảnh**: <<.../... = ...%>> (ngưỡng Release ≤ 2%)
-- Top lỗi (trong: bỏ sót, thừa, sai lớp, sai vị trí/kích thước, sai thuộc tính, sai mask) + một ảnh ví dụ mỗi loại: <<>>
-- **Giới hạn mẫu nhỏ** (cận trên 95% trong `qc_report_auto.md`): <<>>
-- Script kiểm được / không kiểm được (ví dụ ôm sát, cùng bỏ sót với máy, theo checklist thật): <<>>
+- Mẫu: 5 ảnh (0 ảnh `can_review` vì không tick box nào + 5 ngẫu nhiên, seed 42: img_003, img_006, img_014, img_031, img_035; 97 đối tượng / 24 ảnh, 483 đối tượng trong release); người kiểm: bạn (**hạn chế**: bạn vừa là người duyệt).
+- Lỗi theo **đối tượng**: 1/97 = 1.0% · theo **ảnh**: 1/5 = 20.0% (ngưỡng Release ≤ 2%)
+- Top lỗi (trong: bỏ sót, thừa, sai lớp, sai vị trí/kích thước, sai thuộc tính, sai mask) + một ảnh ví dụ mỗi loại: `sai_vi_tri_kich_thuoc` 1 lỗi — img_006 box id 85 (`person`): cạnh trên dư ~45 px, cạnh dưới cắt chân ~18 px (IoU với box gốc ≈ 0.60). Không ghi nhận loại lỗi khác.
+- **Giới hạn mẫu nhỏ** (cận trên 95% trong `qc_report_auto.md`): 1 ảnh lỗi / 5 ảnh → cận trên 95% (Wilson) của tỉ lệ ảnh lỗi thật là **62%**; mẫu 5 ảnh không chứng minh được "≤ 2%". **Lần QC đầu tôi ghi cả 5 ảnh là `khong`**; chỉ sau khi đối chiếu `traps_key.json` (sau export) mới thấy box id 85 ở img_006 chính là bẫy `loose` đã lọt khi review và còn nguyên trong nhãn cuối → QC bởi cùng người duyệt bỏ sót đúng lỗi mà người đó đã bỏ sót khi review.
+- Script kiểm được / không kiểm được (ví dụ ôm sát, cùng bỏ sót với máy, theo checklist thật): script **không** kiểm được: box có ôm sát vật không, vật bị cả máy lẫn người cùng bỏ sót, và người review có thật sự làm theo checklist không. Script chỉ đếm theo phiếu kiểm bằng mắt.
 
-**Quyết định: <<Release / Hold / Rework>>**, ngày <<YYYY-MM-DD>>. Lý do (đi theo Hold → Rework → Release): <<>>
-Nếu Rework / Hold, việc cần làm tiếp: <<>>
+**Quyết định: Rework**, ngày 2026-11-17. Lý do (đi theo Hold → Rework → Release): không Hold vì guideline đã được làm rõ ở v1.1 và dữ liệu không hỏng; Rework vì lỗi theo ảnh 1/5 = 20% > 2% và bắt bẫy 9/12 = 75% < 80%, lô cần phải review lại (khớp gợi ý REWORK của `qc_report.py`); chưa Release.
+Nếu Rework / Hold, việc cần làm tiếp: review lại lô 24 ảnh theo checklist và guideline v1.1 (gồm sửa box id 85 ở img_006 và 9 box < 20 px nêu ở mục 6).
 
 ## 8. Ghi chú cá nhân
 
 - **Dùng AI để làm bài** (công cụ nào, việc gì, kiểm tra thế nào; "không dùng" nếu không): 
-  Trả lời: Claude Code (trợ lý lập trình) để đọc tài liệu lab, giải thích các bước, sửa bug `make_cvat_labels.py` và soạn nháp ghi chú Part 1 trong mục này. Kiểm tra: dán lại nhãn vào CVAT thành công, `validate_labels.py --all` OK (4 ảnh, 61 đối tượng), tự đọc lại từng dòng. AI **không** nhìn ảnh gold và không gợi ý nhãn.
+  Trả lời: Dùng hỗ trợ tổng hợp số liệu, nội dung, hỗ trợ viết báo cáo
 - Gold có bị nhiễm không (bạn có nhìn pre-label hay hỏi AI trước khi gán xong)? 
   Trả lời: Không (đã gán tay trong CVAT, không chạy model hay AI Tools lên 4 ảnh gold).
 - Máy / GPU / CVAT dùng; vướng mắc cài đặt: 
   Trả lời: Windows 11, NVIDIA GeForce RTX 3050 Laptop GPU (CUDA), CVAT Docker **v2.74.1** (không phải 2.81 như slide), Python 3.13 (repo khuyến nghị 3.10–3.12). Server CVAT có cài YOLO26n và MobileSAM (Nuclio) nhưng **không** dùng cho Task gold. Vướng mắc: tab Raw báo `Attribute: "conf": attribute values must be a non-empty array` (xem dòng bug script).
-- Dùng cache `data/cache/` thay vì tự chạy? <<không / có, vì ...>>
+- Dùng cache `data/cache/` thay vì tự chạy? Không: tự chạy YOLO26m và YOLOE trên 36 ảnh bằng GPU (r05, r06 trong `model_log.csv`).
 - Lỗi / bug script đã gặp (nếu có): 
   Trả lời: Lỗi / bug script: make_cvat_labels.py sinh values: [] nên CVAT báo lỗi “attribute values must be a non-empty array”. Đã sửa thành values = [default_value] (`[""]` cho `conf`, `["false"]` cho `can_review`, giống UI CVAT tự sinh), sinh lại `cvat/labels_generated.json`; không đổi tên nhãn hay mục `rules`.
+  `scripts/check_submission.py`: regex tiêu đề README chỉ nhận MSHV toàn chữ số (`\d{5,}`), nên MSHV `2A202603189` luôn bị báo thiếu tiêu đề. Đã sửa thành `[0-9A-Za-z]{5,}`; phần so MSHV với `traps_key.json` giữ nguyên.
 - **Part 1 — gold gán tay:** 4 ảnh, 61 đối tượng, 12 phút (`time_log.csv`). `img_001`: 8 motorbike, 4 person, 1 car, 1 bicycle, 5 ignore_region · `img_012`: 6 person, 4 three_wheeler, 3 car · `img_020`: 4 car, 3 person, 3 three_wheeler, 1 truck · `img_036`: 8 person, 4 motorbike, 3 bicycle, 3 ignore_region. Không tick `can_review` box nào.
 - **Ca khó Part 1 (nguyên liệu calibration):**
   - `img_001`, `img_036`: lần export đầu có 4 box cao < 20 px (`img_001` person 16 px; `img_036` car 14 px, car 12 px, bicycle 19 px), `validate_labels` cảnh báo; đã sửa theo guideline 4.1.6, validate sạch. Ngưỡng 20 px khó ước lượng bằng mắt (bicycle 19 px sát ngưỡng) → liên quan câu hỏi mở 2.
   - `img_001`: 5 `ignore_region` nhỏ nằm gần nhau (cao 15–32 px). Guideline 4.1.6 nói "một `ignore_region` bao cụm ≥ 5 vật" nhưng không nói khi nhiều cụm nhỏ nằm rời thì vẽ một vùng lớn hay nhiều vùng → cần chốt ở v1.1.
 - **Vì sao gold phải gán trước khi thấy nhãn máy (CP1):** nếu đã thấy box máy, người gán dễ bị "neo": chấp nhận những vật máy tìm ra, vẽ box theo vị trí / kích thước của máy, và bỏ sót cùng những vật máy bỏ sót. Gold khi đó giống máy hơn thực tế, nên precision / recall của máy đo trên gold bị **thổi phồng** (nhất là recall: vật máy sót không có trong gold thì không bị tính là sót), và mất chuẩn độc lập để đo thiên kiến tự động hóa ở Part 4.
-- Một điều bạn làm khác lần sau: <<>>
+- Một điều bạn làm khác lần sau: đọc kỹ guideline, phân tích rõ bài toán trước khi làm, và review chuẩn hơn theo checklist.
