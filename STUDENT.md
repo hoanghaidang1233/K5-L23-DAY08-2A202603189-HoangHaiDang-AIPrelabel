@@ -4,7 +4,7 @@
 - MSHV: 2A202603189
 - Lớp (L2 / L3 / khác): L2
 - Tài khoản GitHub: hoanghaidang1233
-- Repo bài nộp (URL): https://github.com/hoanghaidang1233/K5-L23-Day08-2A202603189-HoangHaiDang-AI-Assisted-Labeling
+- Repo bài nộp (URL): https://github.com/hoanghaidang1233/K5-L23-DAY08-2A202603189-HoangHaiDang-AIPrelabel
 - Commit chốt bài (hash): b3ff038
 - Máy: Windows 11, NVIDIA GeForce RTX 3050 Laptop GPU (CUDA)
 - CVAT (Docker): v2.74.1
