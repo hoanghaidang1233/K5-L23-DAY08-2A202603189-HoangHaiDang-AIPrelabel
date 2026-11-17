@@ -8,3 +8,5 @@ __pycache__/
 *.onnx
 _review/
 *.ts
+
+.idea/
